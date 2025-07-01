@@ -442,11 +442,11 @@ Instructies:
           {/* Step 1: Settings */}
           <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
             currentStep === 'settings' ? 'bg-blue-100 text-blue-800' : 
-            audioFiles.length > 0 || currentStep !== 'settings' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+            currentStep === 'generate' || currentStep === 'download' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
           }`}>
             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${
               currentStep === 'settings' ? 'bg-blue-600 text-white' : 
-              audioFiles.length > 0 || currentStep !== 'settings' ? 'bg-green-600 text-white' : 'bg-gray-400 text-white'
+              currentStep === 'generate' || currentStep === 'download' ? 'bg-green-600 text-white' : 'bg-gray-400 text-white'
             }`}>
               1
             </span>
@@ -458,11 +458,11 @@ Instructies:
           {/* Step 2: Generate */}
           <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
             currentStep === 'generate' ? 'bg-blue-100 text-blue-800' : 
-            audioFiles.length > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+            currentStep === 'download' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
           }`}>
             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${
               currentStep === 'generate' ? 'bg-blue-600 text-white' : 
-              audioFiles.length > 0 ? 'bg-green-600 text-white' : 'bg-gray-400 text-white'
+              currentStep === 'download' ? 'bg-green-600 text-white' : 'bg-gray-400 text-white'
             }`}>
               2
             </span>
