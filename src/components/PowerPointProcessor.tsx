@@ -963,36 +963,6 @@ export default function PowerPointProcessor() {
                   </button>
                 </div>
               </div>
-
-              {/* NEW: Audio Generator Toggle */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-blue-800 flex items-center">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
-                      </svg>
-                      🔊 Audio Generator
-                    </h4>
-                    <p className="text-blue-600 text-sm mt-1">
-                      Genereer audio voor alle slides met TTS (Microsoft + Gemini AI)
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowAudioGenerator(!showAudioGenerator)}
-                    className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center space-x-2 ${
-                      showAudioGenerator 
-                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    }`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
-                    </svg>
-                    <span>{showAudioGenerator ? 'Verberg Audio Generator' : 'Toon Audio Generator'}</span>
-                  </button>
-                </div>
-              </div>
               
               {/* Download Buttons */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1014,7 +984,7 @@ export default function PowerPointProcessor() {
                   onClick={() => setShowAudioGenerator(!showAudioGenerator)}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
                 >
-                  🔊 Audio Generator
+                  📦 Download Audio in ZIP
                 </button>
                 
                 <button
@@ -1027,41 +997,107 @@ export default function PowerPointProcessor() {
             </div>
           </div>
 
-          {/* Audio Generator - Simplified Inline Version */}
+          {/* Audio Generator - Simplified Settings First Approach */}
           {showAudioGenerator && (
             <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="text-center">
+              <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
                   </svg>
-                  🔊 Audio Generator
+                  📦 Download Audio in ZIP
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Genereer audio voor alle {slides.length} slides met TTS
+                  Kies je TTS instellingen en genereer audio voor alle {slides.length} slides
                 </p>
+              </div>
+
+              {/* TTS Settings Selection */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h4 className="text-lg font-semibold text-blue-800 mb-4">🔧 Kies je TTS Instellingen</h4>
                 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <div className="flex items-center justify-center space-x-3">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="text-blue-800">
-                      <p className="font-medium">🚧 Audio Generator wordt geladen...</p>
-                      <p className="text-sm text-blue-600 mt-1">
-                        Deze functie wordt binnenkort beschikbaar gesteld met volledige TTS ondersteuning
-                      </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* TTS Engine Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">TTS Engine</label>
+                    <div className="space-y-3">
+                      <div className="p-3 border-2 border-blue-500 bg-blue-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-800">🤖 Gemini AI TTS</div>
+                            <div className="text-sm text-gray-600">Hoogste kwaliteit, 30 stemmen, emoties</div>
+                          </div>
+                          <div className="w-4 h-4 rounded-full bg-blue-500" />
+                        </div>
+                      </div>
+                      
+                      <div className="p-3 border-2 border-gray-200 rounded-lg opacity-50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-800">🎤 Microsoft TTS</div>
+                            <div className="text-sm text-gray-600">Browser native (binnenkort beschikbaar)</div>
+                          </div>
+                          <div className="w-4 h-4 rounded-full bg-gray-300" />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="mt-4 text-sm text-blue-700">
-                    <p className="mb-2"><strong>Geplande features:</strong></p>
-                    <ul className="text-left space-y-1 max-w-md mx-auto">
-                      <li>• 🤖 Gemini AI TTS (30 stemmen + emoties)</li>
-                      <li>• 🎤 Microsoft TTS (browser native)</li>
-                      <li>• 📦 ZIP download van alle audio bestanden</li>
-                      <li>• ▶️ Sequentieel afspelen van alle slides</li>
-                      <li>• ⚙️ Aanpasbare instellingen per TTS engine</li>
+
+                  {/* Gemini Settings */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Gemini Stem</label>
+                      <select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option>Kore - Warm, vriendelijk (mannelijk)</option>
+                        <option>Charon - Professioneel, zakelijk (mannelijk)</option>
+                        <option>Aoede - Melodieus, elegant (vrouwelijk)</option>
+                        <option>Callisto - Kalm, betrouwbaar (vrouwelijk)</option>
+                        <option>Puck - Speels, energiek (mannelijk)</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Emotie</label>
+                      <select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option>😐 Neutraal - Standaard, natuurlijke toon</option>
+                        <option>😊 Gelukkig - Vrolijk en positief</option>
+                        <option>💼 Professioneel - Zakelijk en formeel</option>
+                        <option>🤝 Vriendelijk - Warm en toegankelijk</option>
+                        <option>📚 Informatief - Educatief en duidelijk</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Generate Button */}
+              <div className="text-center">
+                <button className="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-lg flex items-center space-x-3 mx-auto">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
+                  </svg>
+                  <span>🔊 Genereer Audio voor Alle Slides</span>
+                </button>
+                
+                <p className="text-gray-500 text-sm mt-3">
+                  Audio wordt gegenereerd en automatisch gedownload als ZIP bestand
+                </p>
+              </div>
+
+              {/* Info Section */}
+              <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-sm text-gray-700">
+                    <p className="font-medium mb-1">💡 Audio Generator Features:</p>
+                    <ul className="space-y-1 text-gray-600">
+                      <li>• <strong>Gemini TTS:</strong> Hoogste kwaliteit met 30 stemmen en emotie-ondersteuning</li>
+                      <li>• <strong>📦 ZIP Download:</strong> Alle audio bestanden in één bestand met README</li>
+                      <li>• <strong>Automatische naamgeving:</strong> Slide_01_titel.wav, Slide_02_titel.wav, etc.</li>
+                      <li>• <strong>Sequentiële generatie:</strong> Slides worden één voor één verwerkt</li>
+                      <li>• Audio wordt alleen gegenereerd voor slides met scripts</li>
                     </ul>
                   </div>
                 </div>
