@@ -103,7 +103,7 @@ Please generate this as audio output.`
       // If no audio found, try alternative approach with explicit audio request
       console.log('🔄 No audio found, trying alternative approach...')
       
-      // Second attempt: Use a more explicit audio generation request
+      // Second attempt: Use a more explicit audio generation request without unsupported MIME type
       const audioRequest = {
         contents: [{
           role: 'user',
@@ -114,8 +114,7 @@ Please generate this as audio output.`
         generationConfig: {
           temperature: 0.3,
           candidateCount: 1,
-          // Try to request audio output specifically
-          responseMimeType: 'audio/wav'
+          // Remove responseMimeType as audio/wav is not supported
         }
       }
 
