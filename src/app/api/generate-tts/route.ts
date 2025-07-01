@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
       emotion: emotion
     })
 
-    // Use gemini-2.0-flash-thinking-exp-1219 which supports audio generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-thinking-exp-1219' })
+    // Use text-to-speech-001 model which supports audio generation
+    const model = genAI.getGenerativeModel({ model: 'text-to-speech-001' })
 
     // Create TTS request with proper typing
     const requestConfig = {
