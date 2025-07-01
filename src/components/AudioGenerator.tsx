@@ -342,17 +342,6 @@ Instructies:
     }
   }
 
-  const downloadAllAudio = () => {
-    if (audioFiles.length === 0) return
-
-    // Create a zip file would be ideal, but for now download individually
-    audioFiles.forEach((audioFile, index) => {
-      setTimeout(() => {
-        downloadAudio(audioFile.slideNumber)
-      }, index * 500) // Stagger downloads
-    })
-  }
-
   const playAllSequentially = () => {
     if (audioFiles.length === 0) return
 
@@ -423,23 +412,69 @@ Instructies:
             <svg className="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
             </svg>
-            Audio Generator
+            📦 Download Audio in ZIP
           </h3>
           <p className="text-gray-600">
-            Genereer audio voor alle {slides.length} slides met TTS
+            Kies je TTS instellingen en genereer audio voor alle {slides.length} slides
           </p>
         </div>
-        
-        <button
-          onClick={() => setShowSettings(!showSettings)}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span>Instellingen</span>
-        </button>
+      </div>
+
+      {/* Audio Status Section */}
+      <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-lg font-semibold text-orange-800 flex items-center">
+              🎵 Audio Status
+            </h4>
+            <p className="text-orange-700 mt-1">
+              {audioFiles.length === 0 ? (
+                <span className="flex items-center">
+                  <span className="text-red-600 mr-2">❌</span>
+                  Geen audio gegenereerd
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <span className="text-green-600 mr-2">✅</span>
+                  {audioFiles.length} van {slides.length} audio bestanden gegenereerd
+                </span>
+              )}
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>⚙️ TTS Instellingen</span>
+            </button>
+            
+            <button
+              onClick={generateAllAudio}
+              disabled={isGenerating || slides.filter(s => s.script?.trim()).length === 0}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              {isGenerating ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Genereren...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
+                  </svg>
+                  <span>🎙️ Genereer Alle Audio</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Settings Panel */}
@@ -461,7 +496,7 @@ Instructies:
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium text-gray-800">🤖 Gemini AI TTS</div>
-                      <div className="text-sm text-gray-600">Hoogste kwaliteit, 30 stemmen</div>
+                      <div className="text-sm text-gray-600">Hoogste kwaliteit, 30 stemmen, emoties</div>
                     </div>
                     <div className={`w-4 h-4 rounded-full ${!useMicrosoftTTS ? 'bg-blue-500' : 'bg-gray-300'}`} />
                   </div>
@@ -476,7 +511,7 @@ Instructies:
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium text-gray-800">🎤 Microsoft TTS</div>
-                      <div className="text-sm text-gray-600">Browser native, snelheidscontrole</div>
+                      <div className="text-sm text-gray-600">Browser native (binnenkort beschikbaar)</div>
                     </div>
                     <div className={`w-4 h-4 rounded-full ${useMicrosoftTTS ? 'bg-green-500' : 'bg-gray-300'}`} />
                   </div>
@@ -602,38 +637,6 @@ Instructies:
         </div>
       )}
 
-      {/* Main Action Buttons */}
-      <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
-        <button
-          onClick={generateAllAudio}
-          disabled={isGenerating || slides.filter(s => s.script?.trim()).length === 0}
-          className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-3"
-        >
-          {isGenerating ? (
-            <>
-              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Genereren...</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
-              </svg>
-              <span>🔊 Genereer Audio voor Alle Slides</span>
-            </>
-          )}
-        </button>
-
-        {audioFiles.length > 0 && (
-          <button
-            onClick={clearAllAudio}
-            className="px-6 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
-          >
-            🗑️ Wis Alle Audio
-          </button>
-        )}
-      </div>
-
       {/* Audio Files List */}
       {audioFiles.length > 0 && (
         <div className="space-y-6">
@@ -681,13 +684,10 @@ Instructies:
                 </button>
                 
                 <button
-                  onClick={downloadAllAudio}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
+                  onClick={clearAllAudio}
+                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span>📥 Download Apart</span>
+                  🗑️ Wis Alle Audio
                 </button>
               </div>
             </div>
