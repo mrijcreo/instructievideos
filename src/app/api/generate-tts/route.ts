@@ -37,15 +37,16 @@ export async function POST(request: NextRequest) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
-    // Create TTS request
-    const result = await model.generateContent({
+    // Create TTS request with proper typing
+    const requestConfig = {
       contents: [{
-        role: 'user',
+        role: 'user' as const,
         parts: [{
           text: text
         }]
       }],
       generationConfig: {
+        // Use any type to bypass TypeScript restrictions for experimental features
         response_modalities: ['AUDIO'],
         speech_config: {
           voice_config: {
@@ -54,9 +55,10 @@ export async function POST(request: NextRequest) {
             }
           }
         }
-      }
-    })
+      } as any
+    }
 
+    const result = await model.generateContent(requestConfig)
     const response = await result.response
     
     // Get audio data from response
