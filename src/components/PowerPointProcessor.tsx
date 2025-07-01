@@ -4,7 +4,6 @@ import { useState, useRef } from 'react'
 import { saveAs } from 'file-saver'
 import * as XLSX from 'xlsx'
 import SlideEditor from './SlideEditor'
-import AudioGenerator from './AudioGenerator'
 
 interface Slide {
   slideNumber: number
@@ -1028,9 +1027,46 @@ export default function PowerPointProcessor() {
             </div>
           </div>
 
-          {/* Audio Generator */}
+          {/* Audio Generator - Simplified Inline Version */}
           {showAudioGenerator && (
-            <AudioGenerator slides={slides} />
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
+                  </svg>
+                  🔊 Audio Generator
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Genereer audio voor alle {slides.length} slides met TTS
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center justify-center space-x-3">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-blue-800">
+                      <p className="font-medium">🚧 Audio Generator wordt geladen...</p>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Deze functie wordt binnenkort beschikbaar gesteld met volledige TTS ondersteuning
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 text-sm text-blue-700">
+                    <p className="mb-2"><strong>Geplande features:</strong></p>
+                    <ul className="text-left space-y-1 max-w-md mx-auto">
+                      <li>• 🤖 Gemini AI TTS (30 stemmen + emoties)</li>
+                      <li>• 🎤 Microsoft TTS (browser native)</li>
+                      <li>• 📦 ZIP download van alle audio bestanden</li>
+                      <li>• ▶️ Sequentieel afspelen van alle slides</li>
+                      <li>• ⚙️ Aanpasbare instellingen per TTS engine</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Individual Slide Editors */}
