@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { saveAs } from 'file-saver'
+import JSZip from 'jszip'
 
 interface Slide {
   slideNumber: number
@@ -58,6 +59,7 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
   const [microsoftSpeed, setMicrosoftSpeed] = useState(1.0)
   const [showSettings, setShowSettings] = useState(false)
   const [error, setError] = useState<string>('')
+  const [isCreatingZip, setIsCreatingZip] = useState(false)
   
   const audioRefs = useRef<{ [key: number]: HTMLAudioElement }>({})
 
@@ -267,6 +269,77 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
 
     const fileName = `Slide_${slideNumber}_${audioFile.title.replace(/[^a-z0-9]/gi, '_')}.wav`
     saveAs(audioFile.audioBlob, fileName)
+  }
+
+  const downloadAllAudioAsZip = async () => {
+    if (audioFiles.length === 0) return
+
+    setIsCreatingZip(true)
+    setError('')
+
+    try {
+      console.log('📦 Creating ZIP file with', audioFiles.length, 'audio files...')
+      
+      const zip = new JSZip()
+      
+      // Add each audio file to the ZIP
+      for (const audioFile of audioFiles) {
+        const fileName = `Slide_${audioFile.slideNumber.toString().padStart(2, '0')}_${audioFile.title.replace(/[^a-z0-9]/gi, '_')}.wav`
+        console.log(`📁 Adding to ZIP: ${fileName}`)
+        zip.file(fileName, audioFile.audioBlob)
+      }
+      
+      // Add a README file with information
+      const readmeContent = `Presentatie Audio Bestanden
+==============================
+
+Gegenereerd op: ${new Date().toLocaleString('nl-NL')}
+Aantal slides: ${audioFiles.length}
+TTS Engine: ${useMicrosoftTTS ? 'Microsoft TTS' : 'Gemini AI TTS'}
+${!useMicrosoftTTS ? `Stem: ${selectedVoice.name} (${selectedVoice.description})` : ''}
+${!useMicrosoftTTS ? `Emotie: ${selectedEmotion.label}` : ''}
+${useMicrosoftTTS ? `Snelheid: ${microsoftSpeed}x` : ''}
+
+Bestanden:
+${audioFiles.map(af => `- Slide_${af.slideNumber.toString().padStart(2, '0')}_${af.title.replace(/[^a-z0-9]/gi, '_')}.wav`).join('\n')}
+
+Instructies:
+- Speel de bestanden af in volgorde voor een complete presentatie
+- Elk bestand bevat het script voor één slide
+- Gebruik een mediaspeler die WAV bestanden ondersteunt
+`
+      
+      zip.file('README.txt', readmeContent)
+      
+      console.log('🔄 Generating ZIP file...')
+      
+      // Generate the ZIP file
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: {
+          level: 6
+        }
+      })
+      
+      // Create filename with timestamp
+      const now = new Date()
+      const timestamp = now.toISOString().slice(0, 16).replace('T', '_').replace(/:/g, '-')
+      const zipFileName = `Presentatie_Audio_${timestamp}.zip`
+      
+      console.log('💾 Downloading ZIP file:', zipFileName)
+      
+      // Download the ZIP file
+      saveAs(zipBlob, zipFileName)
+      
+      console.log('✅ ZIP download complete!')
+      
+    } catch (error) {
+      console.error('❌ ZIP creation failed:', error)
+      setError('Fout bij maken van ZIP bestand: ' + (error instanceof Error ? error.message : 'Onbekende fout'))
+    } finally {
+      setIsCreatingZip(false)
+    }
   }
 
   const downloadAllAudio = () => {
@@ -514,6 +587,21 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
         </div>
       )}
 
+      {/* ZIP Creation Progress */}
+      {isCreatingZip && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-purple-800 font-medium">
+              📦 ZIP bestand wordt gemaakt met {audioFiles.length} audio bestanden...
+            </span>
+          </div>
+          <p className="text-purple-700 text-sm mt-2 ml-9">
+            Even geduld, alle audio bestanden worden ingepakt voor download
+          </p>
+        </div>
+      )}
+
       {/* Main Action Buttons */}
       <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
         <button
@@ -557,7 +645,7 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
                   ✅ {audioFiles.length} audio bestanden gegenereerd
                 </h4>
                 <p className="text-green-700 text-sm">
-                  Speel individueel af, download of speel alles achter elkaar af
+                  Speel individueel af, download als ZIP of speel alles achter elkaar af
                 </p>
               </div>
               
@@ -573,13 +661,33 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
                 </button>
                 
                 <button
+                  onClick={downloadAllAudioAsZip}
+                  disabled={isCreatingZip}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreatingZip ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>ZIP maken...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                      </svg>
+                      <span>📦 Download ZIP</span>
+                    </>
+                  )}
+                </button>
+                
+                <button
                   onClick={downloadAllAudio}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <span>📥 Download Alles</span>
+                  <span>📥 Download Apart</span>
                 </button>
               </div>
             </div>
@@ -639,6 +747,7 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
             <ul className="space-y-1 text-gray-600">
               <li>• <strong>Gemini TTS:</strong> Hoogste kwaliteit, 30 stemmen, emotie-ondersteuning</li>
               <li>• <strong>Microsoft TTS:</strong> Sneller, browser native, snelheidscontrole</li>
+              <li>• <strong>📦 ZIP Download:</strong> Alle audio bestanden in één bestand met README</li>
               <li>• Audio wordt gegenereerd voor slides met scripts</li>
               <li>• Download individuele bestanden of speel alles achter elkaar af</li>
               <li>• Gebruik de instellingen om stem en emotie aan te passen</li>
