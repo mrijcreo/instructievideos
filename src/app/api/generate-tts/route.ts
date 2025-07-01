@@ -29,26 +29,76 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔊 Attempting Gemini TTS generation:', {
+    console.log('🔊 Generating TTS with Gemini:', {
       textLength: text.length,
       voice: voiceName,
       emotion: emotion
     })
 
-    // Since Gemini TTS is not yet widely available, we'll return an error
-    // that suggests using Microsoft TTS instead
-    console.log('❌ Gemini TTS not available - suggesting Microsoft TTS fallback')
+    // Use gemini-2.0-flash-thinking-exp-1219 which supports audio generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-thinking-exp-1219' })
+
+    // Create TTS request with proper typing
+    const requestConfig = {
+      contents: [{
+        role: 'user' as const,
+        parts: [{
+          text: text
+        }]
+      }],
+      generationConfig: {
+        // Use any type to bypass TypeScript restrictions for experimental features
+        response_modalities: ['AUDIO'],
+        speech_config: {
+          voice_config: {
+            prebuilt_voice_config: {
+              voice_name: voiceName
+            }
+          }
+        }
+      } as any
+    }
+
+    const result = await model.generateContent(requestConfig)
+    const response = await result.response
     
-    return NextResponse.json(
-      { 
-        error: 'Gemini TTS is momenteel niet beschikbaar. Gebruik Microsoft TTS als alternatief.',
-        details: 'Gemini AI TTS is nog niet algemeen beschikbaar. Schakel over naar Microsoft TTS in de instellingen voor betrouwbare audio generatie.',
-        modelError: true,
-        fallbackSuggestion: 'microsoft_tts',
-        helpText: 'Klik op "← Wijzig Instellingen" en selecteer "🎤 Microsoft TTS" voor betrouwbare audio generatie.'
-      },
-      { status: 400 }
-    )
+    // Get audio data from response - use proper TypeScript access with any casting
+    const responseData = response as any
+    const audioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
+    
+    if (!audioData) {
+      // Try alternative access patterns for different API versions
+      const altAudioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inline_data?.data ||
+                          responseData.candidates?.[0]?.content?.parts?.[0]?.audioData?.data ||
+                          responseData.audioData?.data
+      
+      if (!altAudioData) {
+        console.error('No audio data found in response:', JSON.stringify(responseData, null, 2))
+        throw new Error('Geen audio data ontvangen van Gemini TTS')
+      }
+      
+      console.log('✅ TTS generation successful (alternative access)')
+      return NextResponse.json({
+        success: true,
+        audioData: altAudioData,
+        mimeType: 'audio/wav',
+        voice: voiceName,
+        emotion: emotion,
+        textLength: text.length
+      })
+    }
+
+    console.log('✅ TTS generation successful')
+
+    // Return audio as base64
+    return NextResponse.json({
+      success: true,
+      audioData: audioData,
+      mimeType: 'audio/wav',
+      voice: voiceName,
+      emotion: emotion,
+      textLength: text.length
+    })
 
   } catch (error) {
     console.error('❌ TTS generation error:', error)
@@ -59,32 +109,28 @@ export async function POST(request: NextRequest) {
         { 
           error: 'API quota overschreden. Controleer je Google Cloud billing en quota instellingen.',
           details: 'Je hebt je Gemini API limiet bereikt. Wacht tot je quota reset of verhoog je limiet in Google Cloud Console.',
-          quotaError: true,
-          helpUrl: 'https://ai.google.dev/gemini-api/docs/rate-limits'
+          quotaError: true
         },
         { status: 429 }
       )
     }
     
-    // Check if it's a billing error
-    if (error instanceof Error && (error.message.includes('billing') || error.message.includes('payment'))) {
+    // Check if it's a model support error
+    if (error instanceof Error && error.message.includes('does not support')) {
       return NextResponse.json(
         { 
-          error: 'Billing probleem. Controleer je Google Cloud billing instellingen.',
-          details: 'Er is een probleem met je Google Cloud billing. Controleer je betalingsmethode en billing account.',
-          billingError: true,
-          helpUrl: 'https://console.cloud.google.com/billing'
+          error: 'Model ondersteunt geen audio generatie. Probeer Microsoft TTS als alternatief.',
+          details: 'De huidige Gemini model configuratie ondersteunt geen TTS. Gebruik de Microsoft TTS optie in de instellingen.',
+          modelError: true
         },
-        { status: 402 }
+        { status: 400 }
       )
     }
     
     return NextResponse.json(
       { 
         error: 'Fout bij TTS generatie',
-        details: error instanceof Error ? error.message : 'Onbekende fout',
-        suggestion: 'Probeer Microsoft TTS als alternatief in de instellingen',
-        fallbackSuggestion: 'microsoft_tts'
+        details: error instanceof Error ? error.message : 'Onbekende fout'
       },
       { status: 500 }
     )
