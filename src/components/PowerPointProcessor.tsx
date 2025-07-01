@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { saveAs } from 'file-saver'
 import * as XLSX from 'xlsx'
 import SlideEditor from './SlideEditor'
+import AudioGenerator from './AudioGenerator'
 
 interface Slide {
   slideNumber: number
@@ -36,6 +37,7 @@ export default function PowerPointProcessor() {
   const [scriptLength, setScriptLength] = useState<'beknopt' | 'normaal' | 'uitgebreid'>('beknopt')
   const [useTutoyeren, setUseTutoyeren] = useState(true)
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false)
+  const [showAudioGenerator, setShowAudioGenerator] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const scriptInputRef = useRef<HTMLInputElement>(null)
@@ -479,6 +481,7 @@ export default function PowerPointProcessor() {
     setGeneratedScript('')
     setUseTutoyeren(true)
     setIsRegeneratingAll(false)
+    setShowAudioGenerator(false)
     setStatus({ stage: 'idle', progress: 0, message: '' })
   }
 
@@ -487,6 +490,7 @@ export default function PowerPointProcessor() {
     setGeneratedScript('')
     setUseTutoyeren(true)
     setIsRegeneratingAll(false)
+    setShowAudioGenerator(false)
     const slidesWithoutScripts = slides.map(slide => ({
       ...slide,
       script: undefined
@@ -596,7 +600,7 @@ export default function PowerPointProcessor() {
 
         <div className="text-center mt-8">
           <p className="text-gray-500 text-sm">
-            Beide opties ondersteunen Word export en script bewerking
+            Beide opties ondersteunen Word export, script bewerking en audio generatie
           </p>
         </div>
       </div>
@@ -628,8 +632,8 @@ export default function PowerPointProcessor() {
               </h2>
               <p className="text-gray-600">
                 {workflowMode === 'generate' 
-                  ? 'Upload PowerPoint → AI genereert script → Download met notities'
-                  : 'Upload script + PowerPoint → Combineer → Download met notities'
+                  ? 'Upload PowerPoint → AI genereert script → Download met notities + Audio'
+                  : 'Upload script + PowerPoint → Combineer → Download met notities + Audio'
                 }
               </p>
             </div>
@@ -960,9 +964,39 @@ export default function PowerPointProcessor() {
                   </button>
                 </div>
               </div>
+
+              {/* NEW: Audio Generator Toggle */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-blue-800 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
+                      </svg>
+                      🔊 Audio Generator
+                    </h4>
+                    <p className="text-blue-600 text-sm mt-1">
+                      Genereer audio voor alle slides met TTS (Microsoft + Gemini AI)
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAudioGenerator(!showAudioGenerator)}
+                    className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center space-x-2 ${
+                      showAudioGenerator 
+                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M9 9a3 3 0 000 6h6a3 3 0 000-6H9z" />
+                    </svg>
+                    <span>{showAudioGenerator ? 'Verberg Audio Generator' : 'Toon Audio Generator'}</span>
+                  </button>
+                </div>
+              </div>
               
               {/* Download Buttons */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <button
                   onClick={goBackToSettings}
                   className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors font-medium"
@@ -978,6 +1012,13 @@ export default function PowerPointProcessor() {
                 </button>
                 
                 <button
+                  onClick={() => setShowAudioGenerator(!showAudioGenerator)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  🔊 Audio Generator
+                </button>
+                
+                <button
                   onClick={resetApp}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
                 >
@@ -986,6 +1027,11 @@ export default function PowerPointProcessor() {
               </div>
             </div>
           </div>
+
+          {/* Audio Generator */}
+          {showAudioGenerator && (
+            <AudioGenerator slides={slides} />
+          )}
 
           {/* Individual Slide Editors */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
