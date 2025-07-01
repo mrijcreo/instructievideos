@@ -61,11 +61,30 @@ export async function POST(request: NextRequest) {
     const result = await model.generateContent(requestConfig)
     const response = await result.response
     
-    // Get audio data from response
-    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inline_data?.data
+    // Get audio data from response - use proper TypeScript access with any casting
+    const responseData = response as any
+    const audioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
     
     if (!audioData) {
-      throw new Error('Geen audio data ontvangen van Gemini TTS')
+      // Try alternative access patterns for different API versions
+      const altAudioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inline_data?.data ||
+                          responseData.candidates?.[0]?.content?.parts?.[0]?.audioData?.data ||
+                          responseData.audioData?.data
+      
+      if (!altAudioData) {
+        console.error('No audio data found in response:', JSON.stringify(responseData, null, 2))
+        throw new Error('Geen audio data ontvangen van Gemini TTS')
+      }
+      
+      console.log('✅ TTS generation successful (alternative access)')
+      return NextResponse.json({
+        success: true,
+        audioData: altAudioData,
+        mimeType: 'audio/wav',
+        voice: voiceName,
+        emotion: emotion,
+        textLength: text.length
+      })
     }
 
     console.log('✅ TTS generation successful')
