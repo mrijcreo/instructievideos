@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       emotion: emotion
     })
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+    // Use gemini-2.0-flash-thinking-exp-1219 which supports audio generation
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-thinking-exp-1219' })
 
     // Create TTS request with proper typing
     const requestConfig = {
@@ -101,6 +102,30 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ TTS generation error:', error)
+    
+    // Check if it's a quota error and provide helpful message
+    if (error instanceof Error && error.message.includes('quota')) {
+      return NextResponse.json(
+        { 
+          error: 'API quota overschreden. Controleer je Google Cloud billing en quota instellingen.',
+          details: 'Je hebt je Gemini API limiet bereikt. Wacht tot je quota reset of verhoog je limiet in Google Cloud Console.',
+          quotaError: true
+        },
+        { status: 429 }
+      )
+    }
+    
+    // Check if it's a model support error
+    if (error instanceof Error && error.message.includes('does not support')) {
+      return NextResponse.json(
+        { 
+          error: 'Model ondersteunt geen audio generatie. Probeer Microsoft TTS als alternatief.',
+          details: 'De huidige Gemini model configuratie ondersteunt geen TTS. Gebruik de Microsoft TTS optie in de instellingen.',
+          modelError: true
+        },
+        { status: 400 }
+      )
+    }
     
     return NextResponse.json(
       { 
