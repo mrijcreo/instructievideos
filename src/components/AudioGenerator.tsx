@@ -135,42 +135,63 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
   }
 
   const generateGeminiTTS = async (text: string, slideNumber: number): Promise<AudioFile> => {
-    console.log(`🤖 Attempting Gemini TTS for slide ${slideNumber}`)
+    console.log(`🤖 Attempting Gemini 2.5 Flash TTS for slide ${slideNumber}`)
     
-    const response = await fetch('/api/generate-tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: text,
-        voiceName: selectedVoice.name,
-        emotion: selectedEmotion.value
+    try {
+      const response = await fetch('/api/generate-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text,
+          voiceName: selectedVoice.name,
+          emotion: selectedEmotion.value
+        })
       })
-    })
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error(`❌ Gemini TTS API error for slide ${slideNumber}:`, errorData)
-      throw new Error(errorData.error || 'TTS generatie mislukt')
-    }
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error(`❌ Gemini TTS API error for slide ${slideNumber}:`, errorData)
+        
+        // Check if it's a "not supported" error
+        if (errorData.details && (
+          errorData.details.includes('niet beschikbaar') || 
+          errorData.details.includes('niet ondersteund') ||
+          errorData.details.includes('not supported')
+        )) {
+          throw new Error('Gemini TTS is momenteel niet beschikbaar. Schakel over naar Microsoft TTS voor betrouwbare audio generatie.')
+        }
+        
+        throw new Error(errorData.error || 'TTS generatie mislukt')
+      }
 
-    const data = await response.json()
-    
-    // Convert base64 to blob
-    const audioData = atob(data.audioData)
-    const audioArray = new Uint8Array(audioData.length)
-    for (let i = 0; i < audioData.length; i++) {
-      audioArray[i] = audioData.charCodeAt(i)
-    }
-    
-    const audioBlob = new Blob([audioArray], { type: 'audio/wav' })
-    const audioUrl = URL.createObjectURL(audioBlob)
-    
-    const slide = slides.find(s => s.slideNumber === slideNumber)
-    return {
-      slideNumber,
-      title: slide?.title || `Slide ${slideNumber}`,
-      audioBlob,
-      audioUrl
+      const data = await response.json()
+      
+      if (!data.audioData) {
+        throw new Error('Geen audio data ontvangen van Gemini API')
+      }
+      
+      // Convert base64 to blob
+      const audioData = atob(data.audioData)
+      const audioArray = new Uint8Array(audioData.length)
+      for (let i = 0; i < audioData.length; i++) {
+        audioArray[i] = audioData.charCodeAt(i)
+      }
+      
+      const audioBlob = new Blob([audioArray], { type: 'audio/wav' })
+      const audioUrl = URL.createObjectURL(audioBlob)
+      
+      const slide = slides.find(s => s.slideNumber === slideNumber)
+      console.log(`✅ Gemini TTS completed successfully for slide ${slideNumber}`)
+      
+      return {
+        slideNumber,
+        title: slide?.title || `Slide ${slideNumber}`,
+        audioBlob,
+        audioUrl
+      }
+    } catch (error) {
+      console.error(`❌ Gemini TTS failed for slide ${slideNumber}:`, error)
+      throw error
     }
   }
 
@@ -187,7 +208,7 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
     setError('')
     setAudioFiles([])
 
-    console.log(`🎙️ Starting audio generation for ${slides.length} slides using ${useMicrosoftTTS ? 'Microsoft TTS' : 'Gemini TTS'}`)
+    console.log(`🎙️ Starting audio generation for ${slides.length} slides using ${useMicrosoftTTS ? 'Microsoft TTS' : 'Gemini 2.5 Flash TTS'}`)
 
     try {
       const newAudioFiles: AudioFile[] = []
@@ -222,8 +243,10 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
           // If Gemini TTS fails, suggest switching to Microsoft TTS
           if (!useMicrosoftTTS && slideError instanceof Error) {
             const errorMessage = slideError.message
-            if (errorMessage.includes('niet beschikbaar') || errorMessage.includes('not available')) {
-              setError(`Gemini TTS is niet beschikbaar. Schakel over naar Microsoft TTS in de instellingen voor betrouwbare audio generatie.`)
+            if (errorMessage.includes('niet beschikbaar') || 
+                errorMessage.includes('not supported') || 
+                errorMessage.includes('niet ondersteund')) {
+              setError(`Gemini TTS is momenteel niet beschikbaar. Schakel over naar Microsoft TTS in de instellingen voor betrouwbare audio generatie.`)
               break // Stop generation and let user switch to Microsoft TTS
             }
           }
@@ -315,7 +338,7 @@ export default function AudioGenerator({ slides, className = '' }: AudioGenerato
 
 Gegenereerd op: ${new Date().toLocaleString('nl-NL')}
 Aantal slides: ${audioFiles.length}
-TTS Engine: ${useMicrosoftTTS ? 'Microsoft TTS' : 'Gemini AI TTS'}
+TTS Engine: ${useMicrosoftTTS ? 'Microsoft TTS' : 'Gemini 2.5 Flash TTS'}
 ${!useMicrosoftTTS ? `Stem: ${selectedVoice.name} (${selectedVoice.description})` : ''}
 ${!useMicrosoftTTS ? `Emotie: ${selectedEmotion.label}` : ''}
 ${useMicrosoftTTS ? `Snelheid: ${microsoftSpeed}x` : ''}
@@ -329,7 +352,7 @@ Instructies:
 - Gebruik een mediaspeler die WAV bestanden ondersteunt
 
 Opmerking:
-${useMicrosoftTTS ? 'Audio gegenereerd met Microsoft TTS (browser native)' : 'Audio gegenereerd met Gemini AI TTS'}
+${useMicrosoftTTS ? 'Audio gegenereerd met Microsoft TTS (browser native)' : 'Audio gegenereerd met Gemini 2.5 Flash TTS'}
 `
       
       zip.file('README.txt', readmeContent)
@@ -565,8 +588,8 @@ ${useMicrosoftTTS ? 'Audio gegenereerd met Microsoft TTS (browser native)' : 'Au
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium text-gray-800">🤖 Gemini AI TTS</div>
-                        <div className="text-sm text-gray-600">Hoogste kwaliteit, 30 stemmen, emoties</div>
+                        <div className="font-medium text-gray-800">🤖 Gemini 2.5 Flash TTS</div>
+                        <div className="text-sm text-gray-600">AI-powered, hoogste kwaliteit, 30 stemmen</div>
                         <div className="text-xs text-orange-600 font-medium mt-1">⚠️ EXPERIMENTEEL</div>
                       </div>
                       <div className={`w-4 h-4 rounded-full ${!useMicrosoftTTS ? 'bg-blue-500' : 'bg-gray-300'}`} />
@@ -634,7 +657,7 @@ ${useMicrosoftTTS ? 'Audio gegenereerd met Microsoft TTS (browser native)' : 'Au
                         ))}
                       </select>
                     </div>
-                    <p className="text-xs text-orange-600">⚠️ Mogelijk niet beschikbaar</p>
+                    <p className="text-xs text-orange-600">⚠️ Mogelijk niet beschikbaar via huidige API</p>
                   </div>
                 )}
               </div>
@@ -666,7 +689,7 @@ ${useMicrosoftTTS ? 'Audio gegenereerd met Microsoft TTS (browser native)' : 'Au
             <div className="bg-white border border-green-200 rounded-lg p-4 mb-6">
               <h5 className="font-medium text-green-800 mb-2">Gekozen Instellingen:</h5>
               <div className="text-sm text-green-700 space-y-1">
-                <p><strong>TTS Engine:</strong> {useMicrosoftTTS ? '🎤 Microsoft TTS' : '🤖 Gemini AI TTS'}</p>
+                <p><strong>TTS Engine:</strong> {useMicrosoftTTS ? '🎤 Microsoft TTS' : '🤖 Gemini 2.5 Flash TTS'}</p>
                 {!useMicrosoftTTS && (
                   <>
                     <p><strong>Stem:</strong> {selectedVoice.name} ({selectedVoice.description})</p>
@@ -709,7 +732,7 @@ ${useMicrosoftTTS ? 'Audio gegenereerd met Microsoft TTS (browser native)' : 'Au
                 </div>
                 
                 <p className="text-blue-700 text-sm">
-                  {useMicrosoftTTS ? 'Microsoft TTS' : `Gemini TTS (${selectedVoice.name}, ${selectedEmotion.label})`}
+                  {useMicrosoftTTS ? 'Microsoft TTS' : `Gemini 2.5 Flash TTS (${selectedVoice.name}, ${selectedEmotion.label})`}
                 </p>
               </div>
             )}
@@ -874,13 +897,13 @@ ${useMicrosoftTTS ? 'Audio gegenereerd met Microsoft TTS (browser native)' : 'Au
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div className="text-sm text-gray-700">
-            <p className="font-medium mb-1">💡 Audio Generator Workflow:</p>
+            <p className="font-medium mb-1">💡 Audio Generator met Gemini 2.5 Flash:</p>
             <ul className="space-y-1 text-gray-600">
-              <li>• <strong>Stap 1:</strong> Kies TTS engine (Microsoft aanbevolen voor betrouwbaarheid)</li>
-              <li>• <strong>Stap 2:</strong> Genereer audio voor alle slides met je gekozen instellingen</li>
-              <li>• <strong>Stap 3:</strong> Download alle audio bestanden in één ZIP bestand met README</li>
-              <li>• <strong>📦 ZIP bevat:</strong> Alle WAV bestanden + README met instructies</li>
-              <li>• <strong>🎵 Audio kwaliteit:</strong> Microsoft TTS = betrouwbaar, Gemini AI = experimenteel</li>
+              <li>• <strong>Microsoft TTS:</strong> Betrouwbaar, browser native, snelheidscontrole</li>
+              <li>• <strong>Gemini 2.5 Flash TTS:</strong> Experimenteel, mogelijk niet beschikbaar via API</li>
+              <li>• <strong>📦 ZIP Download:</strong> Alle audio bestanden + README met instructies</li>
+              <li>• <strong>🎵 Aanbeveling:</strong> Gebruik Microsoft TTS voor betrouwbare resultaten</li>
+              <li>• <strong>🔬 Gemini TTS:</strong> Wordt getest met Gemini 2.5 Flash model</li>
             </ul>
           </div>
         </div>

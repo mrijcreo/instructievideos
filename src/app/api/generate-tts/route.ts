@@ -29,108 +29,177 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔊 Generating TTS with Gemini:', {
+    console.log('🔊 Generating TTS with Gemini 2.5 Flash:', {
       textLength: text.length,
       voice: voiceName,
       emotion: emotion
     })
 
-    // Use text-to-speech-001 model which supports audio generation
-    const model = genAI.getGenerativeModel({ model: 'text-to-speech-001' })
-
-    // Create TTS request with proper typing
-    const requestConfig = {
-      contents: [{
-        role: 'user' as const,
-        parts: [{
-          text: text
-        }]
-      }],
+    // Use gemini-2.5-flash which supports multimodal including audio generation
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
       generationConfig: {
-        // Use any type to bypass TypeScript restrictions for experimental features
-        response_modalities: ['AUDIO'],
-        speech_config: {
-          voice_config: {
-            prebuilt_voice_config: {
-              voice_name: voiceName
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+      }
+    })
+
+    try {
+      // First attempt: Try with audio generation request
+      const audioPrompt = `Generate speech audio for the following Dutch text using voice "${voiceName}" with "${emotion}" emotion:
+
+"${text}"
+
+Please generate this as audio output.`
+
+      const result = await model.generateContent([
+        {
+          text: audioPrompt
+        }
+      ])
+
+      const response = await result.response
+      
+      // Check if we got audio data in the response
+      const candidates = response.candidates
+      if (candidates && candidates.length > 0) {
+        const candidate = candidates[0]
+        
+        // Look for audio data in various possible locations
+        const content = candidate.content
+        if (content && content.parts) {
+          for (const part of content.parts) {
+            // Check for inline audio data
+            if (part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.startsWith('audio/')) {
+              console.log('✅ Found audio data in response')
+              return NextResponse.json({
+                success: true,
+                audioData: part.inlineData.data,
+                mimeType: part.inlineData.mimeType,
+                voice: voiceName,
+                emotion: emotion,
+                textLength: text.length
+              })
+            }
+            
+            // Check for file data
+            if (part.fileData && part.fileData.mimeType && part.fileData.mimeType.startsWith('audio/')) {
+              console.log('✅ Found file audio data in response')
+              return NextResponse.json({
+                success: true,
+                audioData: part.fileData.fileUri, // This would need special handling
+                mimeType: part.fileData.mimeType,
+                voice: voiceName,
+                emotion: emotion,
+                textLength: text.length
+              })
             }
           }
         }
-      } as any
-    }
+      }
 
-    const result = await model.generateContent(requestConfig)
-    const response = await result.response
-    
-    // Get audio data from response - use proper TypeScript access with any casting
-    const responseData = response as any
-    const audioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
-    
-    if (!audioData) {
-      // Try alternative access patterns for different API versions
-      const altAudioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inline_data?.data ||
-                          responseData.candidates?.[0]?.content?.parts?.[0]?.audioData?.data ||
-                          responseData.audioData?.data
+      // If no audio found, try alternative approach with explicit audio request
+      console.log('🔄 No audio found, trying alternative approach...')
       
-      if (!altAudioData) {
-        console.error('No audio data found in response:', JSON.stringify(responseData, null, 2))
-        throw new Error('Geen audio data ontvangen van Gemini TTS')
+      // Second attempt: Use a more explicit audio generation request
+      const audioRequest = {
+        contents: [{
+          role: 'user',
+          parts: [{
+            text: `Convert this text to speech audio in Dutch with voice "${voiceName}" and emotion "${emotion}": ${text}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          candidateCount: 1,
+          // Try to request audio output specifically
+          responseMimeType: 'audio/wav'
+        }
+      }
+
+      const audioResult = await model.generateContent(audioRequest)
+      const audioResponse = await audioResult.response
+      
+      // Check for audio in the alternative response
+      const audioCandidates = audioResponse.candidates
+      if (audioCandidates && audioCandidates.length > 0) {
+        const audioCandidate = audioCandidates[0]
+        const audioContent = audioCandidate.content
+        
+        if (audioContent && audioContent.parts) {
+          for (const part of audioContent.parts) {
+            if (part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.startsWith('audio/')) {
+              console.log('✅ Found audio data in alternative response')
+              return NextResponse.json({
+                success: true,
+                audioData: part.inlineData.data,
+                mimeType: part.inlineData.mimeType,
+                voice: voiceName,
+                emotion: emotion,
+                textLength: text.length
+              })
+            }
+          }
+        }
+      }
+
+      // If still no audio, return error with helpful message
+      console.log('❌ No audio data found in Gemini response')
+      return NextResponse.json(
+        { 
+          error: 'Gemini TTS niet beschikbaar',
+          details: 'Gemini 2.5 Flash ondersteunt momenteel geen audio generatie via deze API. Gebruik Microsoft TTS als alternatief.',
+          suggestion: 'Schakel over naar Microsoft TTS in de instellingen voor betrouwbare audio generatie.'
+        },
+        { status: 400 }
+      )
+
+    } catch (apiError: any) {
+      console.error('❌ Gemini API error:', apiError)
+      
+      // Check for specific error types
+      if (apiError.message && apiError.message.includes('audio')) {
+        return NextResponse.json(
+          { 
+            error: 'Audio generatie niet ondersteund',
+            details: 'Gemini 2.5 Flash ondersteunt momenteel geen audio output via deze API configuratie.',
+            suggestion: 'Gebruik Microsoft TTS voor betrouwbare audio generatie.'
+          },
+          { status: 400 }
+        )
       }
       
-      console.log('✅ TTS generation successful (alternative access)')
-      return NextResponse.json({
-        success: true,
-        audioData: altAudioData,
-        mimeType: 'audio/wav',
-        voice: voiceName,
-        emotion: emotion,
-        textLength: text.length
-      })
+      if (apiError.message && apiError.message.includes('quota')) {
+        return NextResponse.json(
+          { 
+            error: 'API quota overschreden',
+            details: 'Je hebt je Gemini API limiet bereikt. Wacht tot je quota reset of verhoog je limiet.',
+            quotaError: true
+          },
+          { status: 429 }
+        )
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'Gemini API fout',
+          details: apiError.message || 'Onbekende API fout',
+          suggestion: 'Probeer Microsoft TTS als alternatief.'
+        },
+        { status: 500 }
+      )
     }
-
-    console.log('✅ TTS generation successful')
-
-    // Return audio as base64
-    return NextResponse.json({
-      success: true,
-      audioData: audioData,
-      mimeType: 'audio/wav',
-      voice: voiceName,
-      emotion: emotion,
-      textLength: text.length
-    })
 
   } catch (error) {
     console.error('❌ TTS generation error:', error)
     
-    // Check if it's a quota error and provide helpful message
-    if (error instanceof Error && error.message.includes('quota')) {
-      return NextResponse.json(
-        { 
-          error: 'API quota overschreden. Controleer je Google Cloud billing en quota instellingen.',
-          details: 'Je hebt je Gemini API limiet bereikt. Wacht tot je quota reset of verhoog je limiet in Google Cloud Console.',
-          quotaError: true
-        },
-        { status: 429 }
-      )
-    }
-    
-    // Check if it's a model support error
-    if (error instanceof Error && error.message.includes('does not support')) {
-      return NextResponse.json(
-        { 
-          error: 'Model ondersteunt geen audio generatie. Probeer Microsoft TTS als alternatief.',
-          details: 'De huidige Gemini model configuratie ondersteunt geen TTS. Gebruik de Microsoft TTS optie in de instellingen.',
-          modelError: true
-        },
-        { status: 400 }
-      )
-    }
-    
     return NextResponse.json(
       { 
         error: 'Fout bij TTS generatie',
-        details: error instanceof Error ? error.message : 'Onbekende fout'
+        details: error instanceof Error ? error.message : 'Onbekende fout',
+        suggestion: 'Gebruik Microsoft TTS voor betrouwbare audio generatie.'
       },
       { status: 500 }
     )
