@@ -29,103 +29,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔊 Generating TTS with Gemini 1.5 Pro:', {
+    console.log('🔊 Attempting Gemini TTS generation:', {
       textLength: text.length,
       voice: voiceName,
       emotion: emotion
     })
 
-    // Use Gemini 1.5 Pro which has audio support
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
-
-    // Create TTS request with proper configuration for Gemini 1.5 Pro
-    const requestConfig = {
-      contents: [{
-        role: 'user' as const,
-        parts: [{
-          text: `Generate audio speech for the following text with voice "${voiceName}" and emotion "${emotion}": ${text}`
-        }]
-      }],
-      generationConfig: {
-        // Use any type to bypass TypeScript restrictions for experimental features
-        response_modalities: ['AUDIO'],
-        speech_config: {
-          voice_config: {
-            prebuilt_voice_config: {
-              voice_name: voiceName
-            }
-          }
-        }
-      } as any
-    }
-
-    try {
-      const result = await model.generateContent(requestConfig)
-      const response = await result.response
-      
-      // Get audio data from response - use proper TypeScript access with any casting
-      const responseData = response as any
-      const audioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
-      
-      if (!audioData) {
-        // Try alternative access patterns for different API versions
-        const altAudioData = responseData.candidates?.[0]?.content?.parts?.[0]?.inline_data?.data ||
-                            responseData.candidates?.[0]?.content?.parts?.[0]?.audioData?.data ||
-                            responseData.audioData?.data
-        
-        if (!altAudioData) {
-          console.error('No audio data found in response:', JSON.stringify(responseData, null, 2))
-          throw new Error('Geen audio data ontvangen van Gemini TTS')
-        }
-        
-        console.log('✅ TTS generation successful (alternative access)')
-        return NextResponse.json({
-          success: true,
-          audioData: altAudioData,
-          mimeType: 'audio/wav',
-          voice: voiceName,
-          emotion: emotion,
-          textLength: text.length
-        })
-      }
-
-      console.log('✅ TTS generation successful')
-
-      // Return audio as base64
-      return NextResponse.json({
-        success: true,
-        audioData: audioData,
-        mimeType: 'audio/wav',
-        voice: voiceName,
-        emotion: emotion,
-        textLength: text.length
-      })
-
-    } catch (modelError: any) {
-      console.error('❌ Gemini 1.5 Pro TTS error:', modelError)
-      
-      // Check if it's a model support error
-      if (modelError.message?.includes('does not support') || 
-          modelError.message?.includes('AUDIO') ||
-          modelError.message?.includes('modality')) {
-        
-        console.log('🔄 Gemini 1.5 Pro doesn\'t support audio, trying alternative approach...')
-        
-        // Fallback: Return error with suggestion to use Microsoft TTS
-        return NextResponse.json(
-          { 
-            error: 'Gemini 1.5 Pro ondersteunt momenteel geen audio generatie. Gebruik Microsoft TTS als alternatief.',
-            details: 'De huidige Gemini 1.5 Pro configuratie ondersteunt geen TTS. Schakel over naar Microsoft TTS in de instellingen.',
-            modelError: true,
-            fallbackSuggestion: 'microsoft_tts'
-          },
-          { status: 400 }
-        )
-      }
-      
-      // Re-throw other errors to be handled by outer catch
-      throw modelError
-    }
+    // Since Gemini TTS is not yet widely available, we'll return an error
+    // that suggests using Microsoft TTS instead
+    console.log('❌ Gemini TTS not available - suggesting Microsoft TTS fallback')
+    
+    return NextResponse.json(
+      { 
+        error: 'Gemini TTS is momenteel niet beschikbaar. Gebruik Microsoft TTS als alternatief.',
+        details: 'Gemini AI TTS is nog niet algemeen beschikbaar. Schakel over naar Microsoft TTS in de instellingen voor betrouwbare audio generatie.',
+        modelError: true,
+        fallbackSuggestion: 'microsoft_tts',
+        helpText: 'Klik op "← Wijzig Instellingen" en selecteer "🎤 Microsoft TTS" voor betrouwbare audio generatie.'
+      },
+      { status: 400 }
+    )
 
   } catch (error) {
     console.error('❌ TTS generation error:', error)
@@ -160,7 +83,8 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Fout bij TTS generatie',
         details: error instanceof Error ? error.message : 'Onbekende fout',
-        suggestion: 'Probeer Microsoft TTS als alternatief in de instellingen'
+        suggestion: 'Probeer Microsoft TTS als alternatief in de instellingen',
+        fallbackSuggestion: 'microsoft_tts'
       },
       { status: 500 }
     )
