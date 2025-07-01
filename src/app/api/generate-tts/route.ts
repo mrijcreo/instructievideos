@@ -29,16 +29,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔊 Generating TTS with Gemini 2.5 Pro:', {
+    console.log('🔊 Generating TTS with Gemini 1.5 Pro:', {
       textLength: text.length,
       voice: voiceName,
       emotion: emotion
     })
 
-    // Use Gemini 2.5 Pro which has better audio support
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' })
+    // Use Gemini 1.5 Pro which has audio support
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
 
-    // Create TTS request with proper configuration for Gemini 2.5 Pro
+    // Create TTS request with proper configuration for Gemini 1.5 Pro
     const requestConfig = {
       contents: [{
         role: 'user' as const,
@@ -102,20 +102,20 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (modelError: any) {
-      console.error('❌ Gemini 2.5 Pro TTS error:', modelError)
+      console.error('❌ Gemini 1.5 Pro TTS error:', modelError)
       
       // Check if it's a model support error
       if (modelError.message?.includes('does not support') || 
           modelError.message?.includes('AUDIO') ||
           modelError.message?.includes('modality')) {
         
-        console.log('🔄 Gemini 2.5 Pro doesn\'t support audio, trying alternative approach...')
+        console.log('🔄 Gemini 1.5 Pro doesn\'t support audio, trying alternative approach...')
         
         // Fallback: Return error with suggestion to use Microsoft TTS
         return NextResponse.json(
           { 
-            error: 'Gemini 2.5 Pro ondersteunt momenteel geen audio generatie. Gebruik Microsoft TTS als alternatief.',
-            details: 'De huidige Gemini 2.5 Pro configuratie ondersteunt geen TTS. Schakel over naar Microsoft TTS in de instellingen.',
+            error: 'Gemini 1.5 Pro ondersteunt momenteel geen audio generatie. Gebruik Microsoft TTS als alternatief.',
+            details: 'De huidige Gemini 1.5 Pro configuratie ondersteunt geen TTS. Schakel over naar Microsoft TTS in de instellingen.',
             modelError: true,
             fallbackSuggestion: 'microsoft_tts'
           },
